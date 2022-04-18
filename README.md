@@ -2,7 +2,7 @@
 Hent data fra Holdet.dk's managerspil.
 
 ## Eksempel
-Lav en ny instans af HoldetScraper-klassen med HoldetScraper()
+Lav en ny instans af HoldetScraper-klassen:
 
 ```
 from holdetdk-scraper import HoldetScraper
