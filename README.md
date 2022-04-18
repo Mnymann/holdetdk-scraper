@@ -4,18 +4,21 @@ Hent data fra Holdet.dk's managerspil.
 ## Eksempel
 Lav en ny instans af HoldetScraper-klassen med HoldetScraper()
 
+```
+from HoldetScraper import HoldetScraper
 scraper = HoldetScraper()
-
+```
 
 Herefter kan du få en liste over aktive spil på Holdet.dk således:
-
+```
 scraper.active_games
-
+```
 
 Quick start:
 
+```
 table, teams = scraper.get_table_and_teams(scraper.active_games[0], top=10)
-
+```
 
 ### Disclaimer
 Scraperen er primært bygget til Holdet.dk's fodboldmanagerspil og terminologien i outputtet stammer herfra.
