@@ -6,13 +6,34 @@ from helper_functions import get_key
 
 class HoldetScraper():
   def __init__(self):
-    self.__active_games_dict = self.__get_active_games_dict()
+    self.__active_games_dict, self.__inactive_games_dict = self.__get_active_games_dict()
+
     self.active_games = [*self.__active_games_dict]
     self.active_games.sort()
+    
+    self.inactive_games = [*self.__inactive_games_dict]
+    self.inactive_games.sort()
 
-  def __get_active_games_dict(self) -> dict:
+  def __game_has_started(self, game_url: str) -> bool:
     """
-    Get a dictionary of active games on Holdet.dk
+    Check if a specific game on Holdet.dk has started
+    Arguments:
+        game (str): the name of a game on Holdet.dk
+    Returns:
+        An boolean indicating if the game has started
+    """
+
+    url = f'https://www.holdet.dk/da/{game_url}/leaderboards/praemiepuljen'
+    html_raw = requests.get(url)
+    soup = BeautifulSoup(html_raw.content, 'html.parser')
+    rounds = soup.find_all(name = 'ul', id = 'rounds')
+    has_started = len(rounds) > 0
+
+    return has_started
+  
+  def __get__games_dict(self) -> dict:
+    """
+    Get a dictionary of games on Holdet.dk
     Arguments:
         None
     Returns:
@@ -31,6 +52,27 @@ class HoldetScraper():
       game_dict[game] = game_url
 
     return game_dict
+
+  def __get_active_games_dict(self):
+    """
+    Get a dictionary of active games on Holdet.dk together with a dictionary of games that have been launched but have not yet started
+    Arguments:
+        None
+    Returns:
+        Two dictionaries with games as keys and game urls as values
+    """
+    games_dict = self.__get__games_dict()
+    active = {}
+    not_yet_started = {}
+
+    for game, game_url in games_dict.items():
+      if self.__game_has_started(game_url):
+        active[game] = game_url
+      else:
+        not_yet_started[game] = game_url
+    
+    return active, not_yet_started
+
 
   def __get_lastest_round(self, game: str) -> int:
     """
