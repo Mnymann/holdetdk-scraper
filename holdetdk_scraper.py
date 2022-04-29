@@ -151,6 +151,9 @@ class HoldetScraper():
         A dataframe with data for the Top X contestants in præmiepuljen for the specified game and round
     """
 
+    if game not in self.active_games:
+      raise ValueError('Det valgte spil er ikke aktivt. Vælg et spil fra active_games listen')
+
     latest_round = self.__get_lastest_round(game=game)
     contestants = self.__get_no_of_contestants(game=game)
 
@@ -201,7 +204,7 @@ class HoldetScraper():
     soup = BeautifulSoup(page.content, 'html.parser')
     players = soup.find_all(name = 'tbody')[0].find_all(name = 'tr', class_ = re.compile('p'))
     
-    team = pd.DataFrame(columns=['SpillerNavn', 'SpillerHold', 'SpillerPosition', 'SpillerKaptajn', 'SpillerVærdi', 'SpillerVækst']) #init
+    team_list = []
     for p in players:
       captain_check = p.find(name='i', class_='icon-star large gold captain')
       if captain_check is not None:
@@ -217,8 +220,10 @@ class HoldetScraper():
           'SpillerVærdi': int(p['value']),
           'SpillerVækst': int(p['growth'])
       }
-      team = team.append(row, ignore_index=True)
+      team_list.append(row)
     
+    team = pd.DataFrame.from_records(team_list)
+
     game_url = team_link.split('/userteams/')[0].replace('/da/','')
     game = get_key(self.__active_games_dict, game_url)
 
@@ -287,3 +292,6 @@ class HoldetScraper():
 
     return table_enriched, teams_enriched
 
+if __name__ == "__main__":
+    scraper = HoldetScraper()
+    table, teams = scraper.get_table_and_teams(scraper.active_games[0])
