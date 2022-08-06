@@ -10,5 +10,5 @@ Den kan dog også scrape data fra andre spil, fx Håndbold Manager, Golf Manager
 
 
 Bemærk at de hold, som scraperen returnerer, altid vil være holdene fra den seneste runde!
-Umiddelbart kræver det login + guldhold samt brug af selenium-pakken, hvis man vil scrape et specifikt hold fra en specifik runde. Det er indtil videre ude af scope for dette projekt.
+Umiddelbart kræver det login + guldhold samt brug af selenium-pakken, hvis man vil scrape et specifikt hold fra en specifik runde. Det er indtil videre ude af scope for dette hyggeprojekt.
 
