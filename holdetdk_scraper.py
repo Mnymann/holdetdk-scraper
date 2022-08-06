@@ -126,17 +126,20 @@ class HoldetScraper():
     soup = BeautifulSoup(html_raw.content, 'html.parser')
     table_html = soup.find_all(name = 'table')
     table_df = pd.read_html(str(table_html), thousands='.', decimal=',')[0][['#', 'Global', 'Spring', 'Hold', 'Manager', 'Afstand', 'Runde', 'Runde.1']]
-                                                                        
-    managers = soup.find_all('a',href=lambda href: href and '/users/' in href, title=True)
-    table_df['ManagerLink'] = [link.get('href') for link in managers]
-
+    #%%
     teams = soup.find_all(name = 'table')[0].find_all('a', href=lambda href: href and '/userteams/' in href)
     table_df['HoldLink'] = [link.get('href') for link in teams]
-
+    #%%
+    # Exclude deleted managers
+    table_df = table_df[table_df['Manager']!='<Slettet>']
+    #%%
+    managers = soup.find_all('a',href=lambda href: href and '/users/' in href, title=True)
+    table_df['ManagerLink'] = [link.get('href') for link in managers]
+    #%%
     table_df.rename(columns={'#': 'Præmiepulje', 
-                             'Afstand': 'Værdi',
-                             'Runde': 'Afstand',
-                             'Runde.1': 'RundeVækst'}, inplace=True)
+                                'Afstand': 'Værdi',
+                                'Runde': 'Afstand',
+                                'Runde.1': 'RundeVækst'}, inplace=True)
     table_df = table_df[['Præmiepulje', 'Global', 'Spring', 'Hold', 'HoldLink', 'Manager', 'ManagerLink', 'Værdi', 'Afstand', 'RundeVækst']]
     return table_df
   
