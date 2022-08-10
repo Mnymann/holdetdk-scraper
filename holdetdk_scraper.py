@@ -1,4 +1,6 @@
 import pandas as pd
+import numpy as np
+from tqdm import tqdm
 import re
 import requests
 from bs4 import BeautifulSoup
@@ -172,18 +174,12 @@ class HoldetScraper():
       raise ValueError('Kan ikke data for mindre end én deltager')
     elif top > contestants:
       print(f'Du har efterspurgt Top {str(top)}, men der findes kun {str(contestants)} deltagere i præmiepuljen. \n Returnerer hele præmiepuljen.')
-      n_pages = contestants
+      top = contestants
 
     page_list = []
-    page = 1 # init
-    while True:
+    for page in tqdm(range(1, int(np.ceil(top/24))+1), desc = f'{game}, Runde {str(round)}: Henter tabel for Top {str(top)} i præmiepuljen'):
       page_df = self.__get_standings_table_page(game=game, round=round, page=page)
       page_list.append(page_df)
-
-      if 25*page >= top:
-        break
-      else:
-        page = page + 1
 
     total_df = pd.concat(page_list).reset_index(drop=True)
     total_df = total_df.drop_duplicates('HoldLink')
@@ -246,7 +242,7 @@ class HoldetScraper():
   def get_teams(self, team_link_list: list) -> pd.DataFrame:
     """
     Get teams on Holdet.dk
-    Warning: The teams returned will always be those of the currently active round
+    Warning: The teams returned will always be those of the currently active round!
     Arguments:
         team_link_list (list): A list of team_links containing the url of a team on Holdet.dk, without the 'www.holdet.dk' part
     Returns:
@@ -254,7 +250,7 @@ class HoldetScraper():
     """
 
     team_list = []
-    for team_link in team_link_list:
+    for team_link in tqdm(team_link_list, desc = f'Henter hold'):
       team_df = self.__get_team(team_link=team_link)
       team_list.append(team_df)
 
@@ -276,7 +272,7 @@ class HoldetScraper():
     """
 
     table_simple = self.get_standings_table(game=game, round=round, top=top)
-    teams_simple = self.get_teams(table_simple['HoldLink'])
+    teams_simple = self.get_teams(team_link_list = table_simple['HoldLink'])
 
     table_info = table_simple[['HoldLink', 'Præmiepulje', 'Global']]
     
