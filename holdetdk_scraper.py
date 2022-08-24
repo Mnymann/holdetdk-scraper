@@ -111,7 +111,25 @@ class HoldetScraper():
     contestants = int(soup.find_all(name = 'div', class_ = 'panel summary')[0].find_all(name='h3')[0].text.replace('.',''))
 
     return contestants
-  
+
+  def __get_no_of_pages(self, game: str) -> int:
+    """
+    Get the number of pages in præmiepuljen for a specific game on Holdet.dk
+    Arguments:
+        game (str): the name of an active game on Holdet.dk
+    Returns:
+        An integer with the number of pages in præmiepuljen for the game
+    """
+    
+    game_url = self.__active_games_dict[game]
+    url = f'https://www.holdet.dk/da/{game_url}/leaderboards/praemiepuljen'
+    html_raw = requests.get(url)
+    soup = BeautifulSoup(html_raw.content, 'html.parser')
+    pages = soup.find_all(name = 'ul', class_ = 'pagination')[0].find_all(name='a')
+    n_pages = int(pages[len(pages)-2].text)
+
+    return n_pages
+
   def __get_standings_table_page(self, game: str, round: int, page: int) -> pd.DataFrame:
     """
     Get data for the contestants in a specific page of the standings table (præmiepuljen) for a specific round of a specific game on Holdet.dk
@@ -145,13 +163,15 @@ class HoldetScraper():
     table_df = table_df[['Præmiepulje', 'Global', 'Spring', 'Hold', 'HoldLink', 'Manager', 'ManagerLink', 'Værdi', 'Afstand', 'RundeVækst']]
     return table_df
   
-  def get_standings_table(self, game: str, round = 0, top = 100) -> pd.DataFrame:
+  def get_standings_table(self, game: str, round = 0, top = 100, random_sample = False) -> pd.DataFrame:
     """
     Get Top X of præmiepuljen of a specific round of a specific game on Holdet.dk
     Arguments:
         game (str): the name of an active game on Holdet.dk
         round (int): the round of the game. Defaults to the latest round
-        top (int): the top part of præmiepuljen you want. Defaults to Top 100
+        top (int): the top part of præmiepuljen you want. Defaults to Top 100. Set to 0 in order to return all.
+        random_sample (bool): Set to True in order to get a random sample from præmiepuljen. The number of teams returned is the number specified in the 'top' parameter.
+
     Returns:
         A dataframe with data for the Top X contestants in præmiepuljen for the specified game and round
     """
@@ -161,6 +181,7 @@ class HoldetScraper():
 
     latest_round = self.__get_lastest_round(game=game)
     contestants = self.__get_no_of_contestants(game=game)
+    n_pages = self.__get_no_of_pages(game=game)
 
     if round == 0: # if no round is specified, return results for latest round
       round = latest_round
@@ -170,22 +191,43 @@ class HoldetScraper():
     elif round > latest_round:
       raise ValueError(f'Den sidste tilgængelige runde er Runde {str(latest_round)}')
     
-    if top <= 0:
-      raise ValueError('Kan ikke data for mindre end én deltager')
+    if top < 0:
+      raise ValueError('Kan ikke hente data for mindre end én deltager')
+    elif top == 0:
+      top = contestants
     elif top > contestants:
       print(f'Du har efterspurgt Top {str(top)}, men der findes kun {str(contestants)} deltagere i præmiepuljen. \n Returnerer hele præmiepuljen.')
       top = contestants
 
+    if not random_sample:
+      description = f'{game}, Runde {str(round)}: Henter tabel for Top {str(top)} i præmiepuljen'
+      scrape_range = range(1, int(np.ceil(top/24))+1)
+    else:
+      description = f'{game}, Runde {str(round)}: Henter tabel for {str(top)} tilfældige hold i præmiepuljen'
+      scrape_range = range(1, n_pages + 1)
+
     page_list = []
-    for page in tqdm(range(1, int(np.ceil(top/24))+1), desc = f'{game}, Runde {str(round)}: Henter tabel for Top {str(top)} i præmiepuljen'):
+    for page in tqdm(scrape_range, desc = description):
       page_df = self.__get_standings_table_page(game=game, round=round, page=page)
       page_list.append(page_df)
 
     total_df = pd.concat(page_list).reset_index(drop=True)
     total_df = total_df.drop_duplicates('HoldLink')
-    total_df = total_df[0:top]
+
+    if len(total_df) < top:
+      print(f'Der findes kun {str(len(total_df))} valide (ikke-slettede) hold i præmiepuljen. \n Returnerer alle disse.')
+      top = len(total_df)
+  
+
     total_df['Spil'] = game
     total_df['Runde'] = round
+
+    if not random_sample:
+      total_df = total_df[0:top]
+    else:
+      total_df = total_df.sample(n = top)
+
+    total_df.sort_values(by=['Præmiepulje'], inplace=True)
 
     return total_df  
 
@@ -257,7 +299,7 @@ class HoldetScraper():
     teams_df = pd.concat(team_list).reset_index(drop=True)  
     return teams_df
 
-  def get_table_and_teams(self, game: str, round = 0, top = 100):
+  def get_table_and_teams(self, game: str, round = 0, top = 100, random_sample = False, table_from_previous_round = False):
     """
     Get Top X of præmiepuljen of a specific round of a specific game on Holdet.dk together with the teams of the currently active round
     Warning: The teams returned will always be those of the currently active round
@@ -265,13 +307,18 @@ class HoldetScraper():
         game (str): the name of an active game on Holdet.dk
         round (int): the round of the game. Defaults to the latest round
         top (int): the top part of præmiepuljen you want. Defaults to Top 100
+        random_sample (bool): Set to True in order to get a random sample from præmiepuljen. The number of teams returned is the number specified in the 'top' parameter.
+        table_from_previous_round (bool): Set to True in order to rank teams based on standings from last round. This can be advantageous if a game in the active round is being played at the time when the scraper is run since you can then avoid table shifting during runtime.
     Returns:
         Two dataframes, 
           one with data for the Top X contestants in præmiepuljen for the specified game and round, and
           one with data for the teams of the currently active round
     """
 
-    table_simple = self.get_standings_table(game=game, round=round, top=top)
+    if table_from_previous_round:
+      round = max(self.__get_lastest_round(game=game) - 1,1)
+
+    table_simple = self.get_standings_table(game=game, round=round, top=top, random_sample=random_sample)
     teams_simple = self.get_teams(team_link_list = table_simple['HoldLink'])
 
     table_info = table_simple[['HoldLink', 'Præmiepulje', 'Global']]
