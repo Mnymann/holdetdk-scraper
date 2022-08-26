@@ -1,8 +1,9 @@
 # :soccer: :football: :golf: :bike: :racing_car:    holdetdk-scraper    :computer: :robot: :1234:
 
 ## Intro
-Med denne scraper kan du hente data fra [Holdet.dk]('www.holdet.dk')'s managerspil.
-### Disclaimer: Udvikleren bag scraperen er på ingen måde associeret med Holdet.dk og scraperen er udviklet som et hyggeprojekt.
+Med denne scraper kan du hente data fra [Holdet.dk](http://www.holdet.dk)'s managerspil.
+### Disclaimer: 
+Udvikleren bag scraperen er på ingen måde associeret med Holdet.dk og scraperen er udviklet som et hyggeprojekt.
 
 ## Formål
 På Holdet.dk findes der allerede en statistikside, hvor man bl.a. kan se spillervækst, trend og popularitetsprocent runde for runde. Disse tal er beregnet på baggrund af alle hold, der deltager i spillet. For de mere seriøse managerspillere er det imidlertid langt mere interessant at se på statistikker der er beregnet udelukkende på baggrund af hold fra præmiepuljen (eller dele heraf).
