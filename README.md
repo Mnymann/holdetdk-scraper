@@ -59,10 +59,12 @@ popularity = scraper.calc_popularity_table(teams_table=teams, splits = [100, 100
 
 Du kan gemme outputtet i en Excel-fil således:
 ```
+# lav en output-mappe såfremt den ikke allerede eksisterer
 output_folder = os.path.abspath('') + '/Output'
 if not os.path.exists(output_folder):
     os.makedirs(output_folder)
 
+# gem tabel, teams og popularitet i et Excel-ark
 output_path = f'{output_folder}/{game}, Runde {str(table.at[0, "Runde"])}, Top {len(table)}.xlsx'
 with pd.ExcelWriter(output_path) as writer:  
     table.to_excel(writer, sheet_name='Tabel', index=False)
