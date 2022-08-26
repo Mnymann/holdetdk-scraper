@@ -128,5 +128,13 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Output folder
+# Subfolders
 Output/
+Drivers/
+
+# test script
+test.py
+.DS_Store
+
+# crap
+.DS_Store
