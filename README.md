@@ -1,7 +1,7 @@
 # :soccer: :football: :golf: :bike: :racing_car:          holdetdk-scraper          :computer: :robot: :1234:
 
 ## Intro
-Med denne scraper kan du hente data fra [Holdet.dk](http://www.holdet.dk)'s managerspil. \n
+Med denne scraper kan du hente data fra [Holdet.dk](http://www.holdet.dk)'s managerspil. <br/>
 Udvikleren bag scraperen er på ingen måde associeret med Holdet.dk og scraperen er udviklet som et hyggeprojekt.
 
 ## Formål
@@ -12,3 +12,12 @@ Det primære formål med denne scraper er derfor at beregne spillernes popularit
 ## Terminologi
 Scraperen er primært bygget til Holdet.dk's fodboldspil og terminologien i outputtet fra scraperen stammer herfra. Den kan dog også hente data fra andre spil, fx Håndbold Manager, Golf Manager, Tour Manager, Motor Manager etc.
 
+## Begrænsninger
+Uden et login på Holdet.dk kan man udelukkende se på andre manageres hold fra den aktive runde i et spil. Scraperen er derfor primært bygget med henblik på at scrape hold fra den aktive runde. <br/>
+Ønsker man at scrape hold fra en tidligere runde vil man undervejs blive bedt om at logge ind på Holdet.dk med en bruger som har et guldhold i det pågældende spil. Scraper man hold fra en tidligere runde vil man desuden i outputtet opleve dummy-værdier for 'SpillerHold' og 'SpillerVærdi' da disse oplysninger ikke er tilgængelige for hold fra tidligere runder.
+
+## Performance
+Scraper man hold fra den aktive runde kan man forvente en performance på ~10 min pr. 1.000 hold. <br/>
+Scraper man hold fra en tidligere runde falder performance imidlertid til ~60 min pr. 1.000 hold, da dette kræver brug af “””Selenium””” i stedet for “””requests”””. 
+
+## Eksempel på brug
