@@ -1,5 +1,5 @@
 <h1 align="center">
-:soccer: :football: :golf: :bike: :racing_car: &nbsp; holdetdk-scraper &nbsp; :computer: :robot: :1234: :sunglasses: :metal:
+:soccer: :football: :golf: :biking_man: :racing_car: &nbsp; holdetdk-scraper &nbsp; :computer: :robot: :1234: :nerd_face: :trophy:
 </h1>
 
 ## Intro
@@ -23,4 +23,6 @@ Scraper man hold fra den aktive runde kan man forvente en performance på ~10 mi
 Scraper man hold fra en tidligere runde falder performance imidlertid til ~60 min pr. 1.000 hold, da dette kræver brug af en ```Selenium``` webdriver. 
 
 ## Eksempel på brug
-bla bla
+```
+Test
+```
