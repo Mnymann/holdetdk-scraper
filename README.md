@@ -1,4 +1,6 @@
-# :soccer: :football: :golf: :bike: :racing_car:          holdetdk-scraper          :computer: :robot: :1234:
+<h1 align="center">
+:soccer: :football: :golf: :bike: :racing_car:          holdetdk-scraper          :computer: :robot: :1234:
+</h1>
 
 ## Intro
 Med denne scraper kan du hente data fra [Holdet.dk](http://www.holdet.dk)'s managerspil. <br/>
