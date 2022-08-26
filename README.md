@@ -44,7 +44,7 @@ scraper.active_games
 Vælg hvad du vil scrape ved at indstille parametrene ```game```, ```round``` og ```top```. <br/>
 Du kan f.eks. hente data Top 100 hold i præmiepuljen for runde 1 i Premier Manager Efterår 2022 således:
 ```
-table, teams = scraper.get_table_and_teams(game='Premier Manager Efterår 2022', round=1, top=100) # round=0 giver data fra den aktive runde
+table, teams = scraper.get_table_and_teams(game='Premier Manager Efterår 2022', round=1, top=100)
 ```
 
 Du kan også tilfældigt udvalgte hold fra den aktive runde ved at sætte ```random_sample=True``` og ```round=0```:
@@ -52,13 +52,13 @@ Du kan også tilfældigt udvalgte hold fra den aktive runde ved at sætte ```ran
 table, teams = scraper.get_table_and_teams(game='Premier Manager Efterår 2022', round=0, top=100) 
 ```
 
-Når du (som ovenfor) har gemt en tabel med hold i variablen ```teams``` kan du udregne popularitetsprocenter og anførerpopulariteter for de valgte ´´´splits´´´ således:
-````
+Når du (som ovenfor) har gemt en tabel med hold i variablen ```teams``` kan du udregne popularitetsprocenter og anførerpopulariteter for de valgte ```splits``` således:
+```
 popularity = scraper.calc_popularity_table(teams_table=teams, splits = [100, 1000])
 ```
 
 Du kan gemme outputtet i en Excel-fil således:
-````
+```
 output_folder = os.path.abspath('') + '/Output'
 if not os.path.exists(output_folder):
     os.makedirs(output_folder)
