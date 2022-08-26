@@ -3,7 +3,13 @@ import numpy as np
 from tqdm import tqdm
 import re
 import requests
+import os
 from bs4 import BeautifulSoup
+from pathlib import Path
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from getpass import getpass
 from helper_functions import get_key
 
 class HoldetScraper():
@@ -76,13 +82,13 @@ class HoldetScraper():
     return active, not_yet_started
 
 
-  def __get_lastest_round(self, game: str) -> int:
+  def __get_active_round(self, game: str) -> int:
     """
-    Get the latest round of a specific game on Holdet.dk
+    Get the active round of a specific game on Holdet.dk
     Arguments:
         game (str): the name of an active game on Holdet.dk
     Returns:
-        An integer representing the latest round of the game
+        An integer representing the active round of the game
     """
 
     game_url = self.__active_games_dict[game]
@@ -90,10 +96,10 @@ class HoldetScraper():
     html_raw = requests.get(url)
     soup = BeautifulSoup(html_raw.content, 'html.parser')
     rounds = soup.find_all(name = 'ul', id = 'rounds')[0]
-    latest_round = rounds.find_all(name = 'li', class_ = 'active')[0].text
-    latest_round = int(re.findall(r'\d+', latest_round)[0])  
+    active_round = rounds.find_all(name = 'li', class_ = 'active')[0].text
+    active_round = int(re.findall(r'\d+', active_round)[0])  
 
-    return latest_round
+    return active_round
 
   def __get_no_of_contestants(self, game: str) -> int:
     """
@@ -129,6 +135,20 @@ class HoldetScraper():
     n_pages = int(pages[len(pages)-2].text)
 
     return n_pages
+
+  def __get_game_from_team_link(self, team_link: str) -> str:
+    """
+    Get the game associated with a team on Holdet.dk
+    Arguments:
+        team_link (str): team_link from a team on Holdet.dk
+    Returns:
+        The name of the game assoicated with the team
+    """
+    for game, game_url in self.__active_games_dict.items():
+      if game_url in team_link:
+          g = game
+          break
+    return g
 
   def __get_standings_table_page(self, game: str, round: int, page: int) -> pd.DataFrame:
     """
@@ -168,7 +188,7 @@ class HoldetScraper():
     Get Top X of præmiepuljen of a specific round of a specific game on Holdet.dk
     Arguments:
         game (str): the name of an active game on Holdet.dk
-        round (int): the round of the game. Defaults to the latest round
+        round (int): the round of the game. Defaults to the active round
         top (int): the top part of præmiepuljen you want. Defaults to Top 100. Set to 0 in order to return all.
         random_sample (bool): Set to True in order to get a random sample from præmiepuljen. The number of teams returned is the number specified in the 'top' parameter.
 
@@ -179,17 +199,17 @@ class HoldetScraper():
     if game not in self.active_games:
       raise ValueError('Det valgte spil er ikke aktivt. Vælg et spil fra active_games listen')
 
-    latest_round = self.__get_lastest_round(game=game)
+    active_round = self.__get_active_round(game=game)
     contestants = self.__get_no_of_contestants(game=game)
     n_pages = self.__get_no_of_pages(game=game)
 
-    if round == 0: # if no round is specified, return results for latest round
-      round = latest_round
+    if round == 0: # if no round is specified, return results for active round
+      round = active_round
     
     if round < 0:
       raise ValueError('Den første tilgængelige runde er Runde 1')
-    elif round > latest_round:
-      raise ValueError(f'Den sidste tilgængelige runde er Runde {str(latest_round)}')
+    elif round > active_round:
+      raise ValueError(f'Den sidste tilgængelige runde er Runde {str(active_round)}')
     
     if top < 0:
       raise ValueError('Kan ikke hente data for mindre end én deltager')
@@ -228,6 +248,7 @@ class HoldetScraper():
       total_df = total_df.sample(n = top)
 
     total_df.sort_values(by=['Præmiepulje'], inplace=True)
+    total_df = total_df.reset_index(drop=True)  
 
     return total_df  
 
@@ -269,7 +290,7 @@ class HoldetScraper():
     game = get_key(self.__active_games_dict, game_url)
 
     team['Spil'] = game
-    team['Runde'] = self.__get_lastest_round(game=game)
+    team['Runde'] = self.__get_active_round(game=game)
     team['Hold'] = soup.find_all(name = 'div', id = 'fantasyteam-header')[0].find(name = 'h3').text
     team['Formation'] = str((team['SpillerPosition']=='Forsvar').sum()) + '-' + str((team['SpillerPosition']=='Midtbane').sum()) + '-' + str((team['SpillerPosition']=='Angreb').sum())
     team['Manager'] = soup.find_all(name = 'div', class_ = 'byline')[1].contents[3].text
@@ -281,7 +302,7 @@ class HoldetScraper():
 
     return team
 
-  def get_teams(self, team_link_list: list) -> pd.DataFrame:
+  def get_teams_from_active_round(self, team_link_list: list) -> pd.DataFrame:
     """
     Get teams on Holdet.dk
     Warning: The teams returned will always be those of the currently active round!
@@ -298,28 +319,161 @@ class HoldetScraper():
 
     teams_df = pd.concat(team_list).reset_index(drop=True)  
     return teams_df
+  
+  def __get_team_from_old_round(self, driver, team_link: str, round: int) -> pd.DataFrame:
+    """
+    Get a team on Holdet.dk from a round that is not active anymore
+    Warning: You need a 'gold team' in the requested game for this to work and you are required to log in during the proces!
+    Arguments:
+        team_link (str): the url of a team on Holdet.dk, without the 'www.holdet.dk' part
+        round (int): the round from which you want this team
+    Returns:
+        A dataframe with data for the specified team from the specified round
+    """
+
+    driver.get(f'https://www.holdet.dk{team_link}/rounds')
+
+    if not '/rounds' in driver.current_url:
+      raise ValueError('Du er logget ind med en bruger som ikke har et guldhold i det pågældende spil. Du kan derfor kun hente data fra den aktive runde!')
+
+    game = self.__get_game_from_team_link(team_link=team_link)
+    active_round = self.__get_active_round(game=game)
+
+    runde_buttons = driver.find_elements(by = By.CLASS_NAME, value = "toggle.turn")
+    for button in runde_buttons: # fold den aktive runde ind
+        if button.text.lower() == f'runde {str(active_round)}':
+            button.click()
+            break
+
+    for button in runde_buttons: # fold den efterspurgte runde ud
+        if button.text.lower() == f'runde {str(round)}':
+            button.click()
+            break
+
+    soup = BeautifulSoup(driver.page_source, 'html.parser')
+
+    table_html = soup.find_all(name = 'table')
+    table_df = pd.read_html(str(table_html), thousands='.', decimal=',')[0]
+    table_df.rename(columns={'Unnamed: 0': 'SpillerNavn',
+                            'Unnamed: 1': 'SpillerPosition',
+                            'Vækst': 'SpillerVækst',
+                            'Kaptajn': 'KaptajnVækst'}, inplace=True)
+    table_df = table_df[['SpillerNavn', 'SpillerPosition', 'SpillerVækst', 'KaptajnVækst']] 
+    mask = [f'Runde {i}' for i in range(1,50)]
+    mask.append('Alle')
+    table_df.query("SpillerNavn not in @mask", inplace=True)
+    table_df['SpillerKaptajn'] = table_df['KaptajnVækst'].notna()
+    table_df.drop('KaptajnVækst', axis = 1, inplace=True)
+    table_df.reset_index(inplace=True)
+
+    for idx, player in enumerate(table_df['SpillerNavn']):
+        split = player.split(' ')
+        position = split[len(split)-1].strip()
+        player = player.replace(position , '').strip()
+        table_df.at[idx,'SpillerNavn'] = player
+        table_df.at[idx,'SpillerPosition'] = position
+    
+    table_df['Spil'] = game
+    table_df['Runde'] = round
+    table_df['Hold'] = soup.find_all(name = 'div', id = 'fantasyteam-header')[0].find(name = 'h3').text
+    table_df['Formation'] = str((table_df['SpillerPosition']=='Forsvar').sum()) + '-' + str((table_df['SpillerPosition']=='Midtbane').sum()) + '-' + str((table_df['SpillerPosition']=='Angreb').sum())
+    table_df['Manager'] = soup.find_all(name = 'div', class_ = 'byline')[1].contents[3].text
+    table_df['ManagerPoints'] = int(str(soup.find_all(name = 'div', class_ = 'byline')[1].contents[6]).strip().replace('.', ''))
+    table_df['HoldLink'] = team_link
+    table_df['Formation'] = str((table_df['SpillerPosition']=='Forsvar').sum()) + '-' + str((table_df['SpillerPosition']=='Midtbane').sum()) + '-' + str((table_df['SpillerPosition']=='Angreb').sum())
+    table_df['SpillerHold'] = 'DummyHold'
+    table_df['SpillerVærdi'] = 0
+
+    table_df = table_df[['Spil', 'Runde', 'Hold', 'Formation', 'HoldLink', 'Manager', 'ManagerPoints', 
+                         'SpillerNavn', 'SpillerHold', 'SpillerPosition', 'SpillerKaptajn', 'SpillerVærdi', 'SpillerVækst']]
+
+    return table_df
+
+  def get_teams_from_old_round(self, team_link_list: list, round: int) -> pd.DataFrame:
+    """
+    Get teams on Holdet.dk from a round that is not active anymore
+    Warning: You need a 'gold team' in the requested game for this to work and you are required to log in during the proces!
+    Note: The values returned in the columns 'SpillerHold' and 'SpillerVærdi' are dummy values since these can't be found on the team page for old rounds!
+    Arguments:
+        team_link_list (list): A list of team_links containing the url of a team on Holdet.dk, without the 'www.holdet.dk' part
+        round (int): the round from which you want these teams
+    Returns:
+        A dataframe with data for the specified teams from the specified round
+    """
+
+    game = self.__get_game_from_team_link(team_link=team_link_list[0])
+    active_round = self.__get_active_round(game=game)
+
+    if round < 0:
+      raise ValueError('Den første tilgængelige runde er Runde 1')
+    elif round > active_round:
+      raise ValueError(f'Den sidste tilgængelige runde er Runde {str(active_round)}')
+
+    chrome_driver_path = str(Path(__file__).parent / "Drivers" / "chromedriver")
+
+    if not os.path.exists(chrome_driver_path):
+      if not os.path.exists(chrome_driver_path + '.exe'):
+        raise FileNotFoundError(f'Please download a chromedriver from https://sites.google.com/chromium.org/driver/ and place it under {chrome_driver_path.replace("/chromedriver","")} with the name "chromedriver"')
+
+    driver = webdriver.Chrome(service=Service(chrome_driver_path))
+    driver.maximize_window()
+
+    url = 'https://www.holdet.dk/da'
+    driver.get(url)
+
+    # accept cookies
+    cookie_buttons = driver.find_elements(by = By.CLASS_NAME, value = "CybotCookiebotDialogBodyButton")
+    for button in cookie_buttons:
+        if button.text.lower() == "tillad alle":
+            button.click()
+            break
+    
+    print('Log ind på Holdet.dk og tryk herefter ENTER')
+    getpass('Log ind på Holdet.dk og tryk herefter ENTER')
+
+    team_list = []
+    for team_link in tqdm(team_link_list, desc = f'Henter hold'):
+      team_df = self.__get_team_from_old_round(driver=driver, team_link=team_link, round = round)
+      team_list.append(team_df)
+
+    driver.quit()
+
+    teams_df = pd.concat(team_list).reset_index(drop=True)  
+
+    return teams_df
 
   def get_table_and_teams(self, game: str, round = 0, top = 100, random_sample = False, table_from_previous_round = False):
     """
-    Get Top X of præmiepuljen of a specific round of a specific game on Holdet.dk together with the teams of the currently active round
-    Warning: The teams returned will always be those of the currently active round
+    Get Top X of præmiepuljen of a specific round of a specific game on Holdet.dk together with the teams from that round
     Arguments:
         game (str): the name of an active game on Holdet.dk
-        round (int): the round of the game. Defaults to the latest round
+        round (int): the round of the game. Defaults to the active round
         top (int): the top part of præmiepuljen you want. Defaults to Top 100
         random_sample (bool): Set to True in order to get a random sample from præmiepuljen. The number of teams returned is the number specified in the 'top' parameter.
-        table_from_previous_round (bool): Set to True in order to rank teams based on standings from last round. This can be advantageous if a game in the active round is being played at the time when the scraper is run since you can then avoid table shifting during runtime.
+        table_from_previous_round (bool): If you are scraping teams from the active round during a match it can be advantageous to set this parameter to True. The table returned will then be from the previous round and thus you eliminate the risk of the table shifting during runtime which could potentially cause inaccuraries/duplicates
     Returns:
         Two dataframes, 
           one with data for the Top X contestants in præmiepuljen for the specified game and round, and
-          one with data for the teams of the currently active round
+          one with data for the teams of the specified round
     """
+    
+    active_round = self.__get_active_round(game=game)
 
-    if table_from_previous_round:
-      round = max(self.__get_lastest_round(game=game) - 1,1)
+    if round == 0:
+      round = active_round
+
+    if table_from_previous_round and round == active_round: # get table from previous round
+      round = max(active_round - 1,1)
 
     table_simple = self.get_standings_table(game=game, round=round, top=top, random_sample=random_sample)
-    teams_simple = self.get_teams(team_link_list = table_simple['HoldLink'])
+
+    if table_from_previous_round and round == max(active_round - 1,1): #get teams from the active round
+      round = active_round
+
+    if round == active_round:
+      teams_simple = self.get_teams_from_active_round(team_link_list = table_simple['HoldLink'])
+    elif round < active_round:
+      teams_simple = self.get_teams_from_old_round(team_link_list = table_simple['HoldLink'], round=round)
 
     table_info = table_simple[['HoldLink', 'Præmiepulje', 'Global']]
     
@@ -337,6 +491,62 @@ class HoldetScraper():
                                      'SpillerNavn', 'SpillerHold', 'SpillerPosition', 'SpillerKaptajn', 'SpillerVærdi', 'SpillerVækst']]
 
     return table_enriched, teams_enriched
+  
+  def __calc_popularity(self, teams_table: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calculate popularity percentages and captaincy popularity of the players in the teams_table
+    Arguments:
+        teams_table (pd.DataFrame): a Dataframe returned by one of the functions get_teams_from_active_round(), get_teams_from_old_round() or get_table_and_teams
+    Returns:
+        A DataFrame with popularity percentages and captaincy popularity for all players in the teams_table
+    """
+
+    n_teams = len(teams_table['Hold'].drop_duplicates())
+
+    popularity = teams_table.groupby(['SpillerNavn', 'SpillerPosition']).size().reset_index(name='Antal')
+    popularity['Pop%'] = (popularity['Antal']/n_teams)
+    popularity.drop(['Antal'], axis = 1, inplace = True)
+
+    captain = teams_table[teams_table['SpillerKaptajn']].groupby(['SpillerNavn', 'SpillerPosition']).size().reset_index(name='Antal')
+    captain['(C)%'] = (captain['Antal']/n_teams)
+    captain.drop(['Antal'], axis = 1, inplace = True)
+
+    final = popularity.merge(captain, how = 'left', left_on = ['SpillerNavn','SpillerPosition'], right_on = ['SpillerNavn','SpillerPosition'])
+    final['(C)%'] = final['(C)%'].fillna(0)
+    final.sort_values(by=['Pop%', '(C)%'], inplace=True, ascending=False)
+
+    return final
+
+  def calc_popularity_table(self, teams_table: pd.DataFrame, splits = [100, 1000]) -> pd.DataFrame:
+    """
+    Calculate popularity percentages and captaincy popularity of the players in the teams_table
+    Arguments:
+        teams_table (pd.DataFrame): a Dataframe returned by one of the functions get_teams_from_active_round(), get_teams_from_old_round() or get_table_and_teams
+        splits (list): The splits for which you want to calculate popularity
+    Returns:
+        A DataFrame with popularity percentages and captaincy popularity for all players in the teams_table
+    """
+
+    n_teams = len(teams_table['Hold'].drop_duplicates())
+
+    samlet = self.__calc_popularity(teams_table=teams_table)
+    samlet.rename(columns={'Pop%': 'Pop% (samlet)',
+                           '(C)%': '(C)% (samlet)'}, inplace=True) 
+    pop_table = samlet
+    for split in splits:
+      if n_teams < split:
+        print(f'Der er kun {str(n_teams)} hold i tabellen. Returnerer alle meningsfulde splits.')
+        break
+
+      split_top = self.__calc_popularity(teams_table=teams_table[0:split])
+      split_top.rename(columns={'Pop%': f'Pop% (Top {str(split)})',
+                           '(C)%': f'(C)% (Top {str(split)})'}, inplace=True)
+      pop_table = pop_table.merge(split_top, how = 'left', left_on = ['SpillerNavn','SpillerPosition'], right_on = ['SpillerNavn','SpillerPosition'])    
+    
+    pop_table.fillna(0, inplace=True)
+    pop_table = pop_table.reset_index(drop=True)  
+
+    return pop_table
 
 if __name__ == "__main__":
     scraper = HoldetScraper()
