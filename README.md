@@ -17,7 +17,7 @@ Scraperen er primært bygget til Holdet.dk's fodboldspil og terminologien i outp
 ## Begrænsninger
 Uden et login på Holdet.dk kan man udelukkende se på andre manageres hold fra den aktive runde i et spil. Scraperen er derfor primært bygget med henblik på at scrape hold fra den aktive runde. <br/>
 Ønsker man at scrape hold fra en tidligere runde vil man undervejs blive bedt om at logge ind på Holdet.dk med en bruger som har et guldhold i det pågældende spil. Scraper man hold fra en tidligere runde vil man desuden i outputtet opleve dummy-værdier for 'SpillerHold' og 'SpillerVærdi' da disse oplysninger ikke er tilgængelige for hold fra tidligere runder. <br/>
-Scraping af hold fra tidligere runder kræver desuden brug af en ```Selenium``` webdriver og du vil derfor blive bedt om at downloade en ```chromedriver``` ([link](https://sites.google.com/chromium.org/driver/)) og gemme den under ```/.../Drivers```
+Scraping af hold fra tidligere runder kræver desuden brug af en ```Selenium``` webdriver og du vil derfor blive bedt om at downloade en ```chromedriver``` ([link](https://sites.google.com/chromium.org/driver/)) og gemme den under ```[...]/Drivers/```.
 
 ## Performance
 Scraper man hold fra den aktive runde kan man forvente en performance på ~10 min pr. 1.000 hold. <br/>
