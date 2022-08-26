@@ -1,8 +1,7 @@
-# :soccer: :football: :golf: :bike: :racing_car:    holdetdk-scraper    :computer: :robot: :1234:
+# :soccer: :football: :golf: :bike: :racing_car:          holdetdk-scraper          :computer: :robot: :1234:
 
 ## Intro
-Med denne scraper kan du hente data fra [Holdet.dk](http://www.holdet.dk)'s managerspil.
-### Disclaimer: 
+Med denne scraper kan du hente data fra [Holdet.dk](http://www.holdet.dk)'s managerspil. \n
 Udvikleren bag scraperen er på ingen måde associeret med Holdet.dk og scraperen er udviklet som et hyggeprojekt.
 
 ## Formål
