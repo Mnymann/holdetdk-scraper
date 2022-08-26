@@ -20,6 +20,9 @@ Uden et login på Holdet.dk kan man udelukkende se på andre manageres hold fra 
 
 ## Performance
 Scraper man hold fra den aktive runde kan man forvente en performance på ~10 min pr. 1.000 hold. <br/>
-Scraper man hold fra en tidligere runde falder performance imidlertid til ~60 min pr. 1.000 hold, da dette kræver brug af “””Selenium””” i stedet for “””requests”””. 
+Scraper man hold fra en tidligere runde falder performance imidlertid til ~60 min pr. 1.000 hold, da dette kræver brug af en Selenium webdriver. 
 
 ## Eksempel på brug
+"""
+Test
+"""
