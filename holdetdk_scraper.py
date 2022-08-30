@@ -503,15 +503,15 @@ class HoldetScraper():
 
     n_teams = len(teams_table['Hold'].drop_duplicates())
 
-    popularity = teams_table.groupby(['SpillerNavn', 'SpillerPosition']).size().reset_index(name='Antal')
+    popularity = teams_table.groupby(['SpillerNavn', 'SpillerHold', 'SpillerPosition']).size().reset_index(name='Antal')
     popularity['Pop%'] = (popularity['Antal']/n_teams)
     popularity.drop(['Antal'], axis = 1, inplace = True)
 
-    captain = teams_table[teams_table['SpillerKaptajn']].groupby(['SpillerNavn', 'SpillerPosition']).size().reset_index(name='Antal')
+    captain = teams_table[teams_table['SpillerKaptajn']].groupby(['SpillerNavn', 'SpillerHold', 'SpillerPosition']).size().reset_index(name='Antal')
     captain['(C)%'] = (captain['Antal']/n_teams)
     captain.drop(['Antal'], axis = 1, inplace = True)
 
-    final = popularity.merge(captain, how = 'left', left_on = ['SpillerNavn','SpillerPosition'], right_on = ['SpillerNavn','SpillerPosition'])
+    final = popularity.merge(captain, how = 'left', left_on = ['SpillerNavn', 'SpillerHold', 'SpillerPosition'], right_on = ['SpillerNavn', 'SpillerHold', 'SpillerPosition'])
     final['(C)%'] = final['(C)%'].fillna(0)
     final.sort_values(by=['Pop%', '(C)%'], inplace=True, ascending=False)
 
@@ -528,6 +528,7 @@ class HoldetScraper():
     """
 
     n_teams = len(teams_table['Hold'].drop_duplicates())
+    players_per_team = int(len(teams_table)/len(teams_table['Hold'].drop_duplicates()))
 
     samlet = self.__calc_popularity(teams_table=teams_table)
     samlet.rename(columns={'Pop%': 'Pop% (samlet)',
@@ -538,10 +539,10 @@ class HoldetScraper():
         print(f'Der er kun {str(n_teams)} hold i tabellen. Returnerer alle meningsfulde splits.')
         break
 
-      split_top = self.__calc_popularity(teams_table=teams_table[0:split])
+      split_top = self.__calc_popularity(teams_table=teams_table[0:(players_per_team*split)])
       split_top.rename(columns={'Pop%': f'Pop% (Top {str(split)})',
                            '(C)%': f'(C)% (Top {str(split)})'}, inplace=True)
-      pop_table = pop_table.merge(split_top, how = 'left', left_on = ['SpillerNavn','SpillerPosition'], right_on = ['SpillerNavn','SpillerPosition'])    
+      pop_table = pop_table.merge(split_top, how = 'left', left_on = ['SpillerNavn', 'SpillerHold', 'SpillerPosition'], right_on = ['SpillerNavn', 'SpillerHold', 'SpillerPosition'])    
     
     pop_table.fillna(0, inplace=True)
     pop_table = pop_table.reset_index(drop=True)  
