@@ -49,7 +49,7 @@ table, teams = scraper.get_table_and_teams(game='Premier Manager Efterår 2022',
 
 Du kan også tilfældigt udvalgte hold fra den aktive runde ved at sætte ```random_sample=True``` og ```round=0```:
 ```
-table, teams = scraper.get_table_and_teams(game='Premier Manager Efterår 2022', round=0, top=100) 
+table, teams = scraper.get_table_and_teams(game='Premier Manager Efterår 2022', round=0, top=100, random_sample=True) 
 ```
 
 Hvis du henter hold fra den aktive runde, mens der er kampe i gang, kan du med fordel sætte ```table_from_previous_round=True```.
